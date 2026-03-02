@@ -30,7 +30,10 @@ gem "solid_cable"
 
 gem "dotenv-rails"
 
-# Reduces boot times through caching; required in config/boot.rb
+gem "serpapi"
+gem "httparty"
+gem "redcarpet"
+
 gem "bootsnap", require: false
 
 # Deploy this application anywhere as a Docker container [https://kamal-deploy.org]
