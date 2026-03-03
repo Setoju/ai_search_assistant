@@ -1,0 +1,27 @@
+/* Flash message styles */
+
+.flash-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 12px 20px 0;
+}
+
+.flash-message {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  animation: fadeIn 0.3s ease;
+  margin-bottom: 8px;
+}
+
+.flash-notice {
+  background: rgba(81, 207, 102, 0.1);
+  border: 1px solid rgba(81, 207, 102, 0.3);
+  color: var(--color-success);
+}
+
+.flash-alert {
+  background: var(--color-error-bg);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  color: var(--color-error);
+}

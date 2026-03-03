@@ -1,0 +1,23 @@
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h2>Resend Unlock Instructions</h2>
+      <p>Enter your email to receive unlock instructions</p>
+    </div>
+
+    <%= form_for(resource, as: resource_name, url: unlock_path(resource_name), html: { method: :post }) do |f| %>
+      <%= render "devise/shared/error_messages", resource: resource %>
+
+      <div class="auth-field">
+        <%= f.label :email %>
+        <%= f.email_field :email, autofocus: true, autocomplete: "email", placeholder: "you@example.com" %>
+      </div>
+
+      <%= f.submit "Resend unlock instructions", class: "auth-submit" %>
+    <% end %>
+
+    <div class="auth-links">
+      <%= render "devise/shared/links" %>
+    </div>
+  </div>
+</div>
