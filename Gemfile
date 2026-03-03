@@ -34,6 +34,8 @@ gem "serpapi"
 gem "httparty"
 gem "redcarpet"
 
+gem "devise"
+
 gem "bootsnap", require: false
 
 # Deploy this application anywhere as a Docker container [https://kamal-deploy.org]
