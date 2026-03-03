@@ -52,6 +52,29 @@ class Orchestrator
     { success: false, error: "Unexpected error.", code: :internal_error }
   end
 
+  # Process with short-term memory from previous conversation messages.
+  def process_with_memory(user_query, history = [])
+    sanitized_query = InputSanitizer.sanitize(user_query)
+    location = InputSanitizer.extract_location(sanitized_query)
+
+    messages = [ { role: "system", content: SYSTEM_PROMPT } ]
+
+    # Add prior conversation history for context (short-term memory, last 10)
+    history.each do |msg|
+      messages << { role: msg.role, content: msg.content }
+    end
+
+    # Always append the current user message at the end
+    messages << { role: "user", content: build_user_message(sanitized_query, location) }
+
+    run_agent_loop(messages, location)
+  rescue InputSanitizer::InvalidInputError => e
+    { success: false, error: e.message, code: e.code }
+  rescue => e
+    Rails.logger.error("[Orchestrator] #{e.class} - #{e.message}")
+    { success: false, error: "Unexpected error.", code: :internal_error }
+  end
+
   private
 
   def build_user_message(query, location)
