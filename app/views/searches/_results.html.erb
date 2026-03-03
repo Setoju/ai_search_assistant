@@ -1,0 +1,17 @@
+<div id="search-results" class="results-container">
+  <div class="results-header">
+    <h2>Results</h2>
+    <div class="results-meta">
+      <span class="meta-badge"><%= metadata[:iterations] %> iteration<%= metadata[:iterations] == 1 ? '' : 's' %></span>
+      <span class="meta-badge"><%= metadata[:tool_calls] %> tool call<%= metadata[:tool_calls] == 1 ? '' : 's' %></span>
+      <span class="meta-badge"><%= metadata[:model] %></span>
+      <% if remaining %>
+        <span class="meta-badge remaining">⚡ <%= remaining %> remaining</span>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="response-content markdown-body">
+    <%= render_markdown(response.to_s) %>
+  </div>
+</div>

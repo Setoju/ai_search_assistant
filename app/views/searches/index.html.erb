@@ -1,0 +1,44 @@
+<div class="search-container">
+  <header class="search-header">
+    <h1>AI Search Assistant</h1>
+    <p class="subtitle">Ask anything — I'll search the web, check weather, and find news for you.</p>
+  </header>
+
+  <div class="search-form-wrapper">
+    <%= form_with url: searches_path, method: :post, data: { turbo_frame: "_top" } do |f| %>
+      <div class="search-input-group">
+        <%= f.text_field :query,
+            placeholder: "Ask me anything... e.g., 'Best cafes in New York' or 'Weather in London'",
+            class: "search-input",
+            required: true,
+            minlength: 2,
+            maxlength: 500,
+            autocomplete: "off",
+            autofocus: true,
+            id: "search-query" %>
+            <%= f.submit "Search", class: "search-button", id: "search-submit", data: { disable_with: "Searching..." } %>
+      </div>
+    <% end %>
+  </div>
+
+  <div id="search-results">
+    <% if @error %>
+      <%= render partial: "searches/error", locals: { error: @error } %>
+    <% elsif @response %>
+      <%= render partial: "searches/results", locals: { response: @response, metadata: @metadata, remaining: @remaining } %>
+    <% else %>
+      <div class="placeholder">
+        <div class="placeholder-icon"></div>
+        <p>Your search results will appear here.</p>
+        <div class="example-queries">
+          <p><strong>Try asking:</strong></p>
+          <ul>
+            <li>"What's the weather in Tokyo?"</li>
+            <li>"Latest news about artificial intelligence"</li>
+            <li>"Best restaurants in San Francisco"</li>
+          </ul>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
