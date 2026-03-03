@@ -1,0 +1,20 @@
+<div class="chat-message <%= message.role %>">
+  <div class="chat-message-avatar">
+    <% if message.role == "user" %>
+      <span class="avatar-user">U</span>
+    <% else %>
+      <span class="avatar-assistant">AI</span>
+    <% end %>
+  </div>
+  <div class="chat-message-body">
+    <div class="chat-message-role"><%= message.role == "user" ? "You" : "Assistant" %></div>
+    <div class="chat-message-content">
+      <% if message.role == "assistant" %>
+        <div class="response-content"><%= render_markdown(message.content) %></div>
+      <% else %>
+        <p><%= simple_format(h(message.content)) %></p>
+      <% end %>
+    </div>
+    <div class="chat-message-time"><%= message.created_at.strftime("%H:%M") %></div>
+  </div>
+</div>

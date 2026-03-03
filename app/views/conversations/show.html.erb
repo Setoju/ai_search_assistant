@@ -1,0 +1,111 @@
+<div class="chat-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>Conversations</h2>
+      <%= button_to "+ New Chat", conversations_path, method: :post, class: "btn-new-chat" %>
+    </div>
+    <div class="sidebar-list">
+      <% if @conversations.any? %>
+        <% @conversations.each do |conv| %>
+          <div class="sidebar-item <%= 'active' if @conversation&.id == conv.id %>">
+            <%= link_to conversation_path(conv), class: "sidebar-item-link" do %>
+              <span class="sidebar-item-title"><%= conv.short_title %></span>
+              <span class="sidebar-item-date"><%= time_ago_in_words(conv.updated_at) %> ago</span>
+            <% end %>
+            <%= button_to conversation_path(conv), method: :delete, class: "sidebar-item-delete", data: { turbo_confirm: "Delete this conversation?" } do %>
+              ✕
+            <% end %>
+          </div>
+        <% end %>
+      <% else %>
+        <div class="sidebar-empty">
+          <p>No conversations yet.</p>
+          <p>Start a new chat!</p>
+        </div>
+      <% end %>
+    </div>
+  </aside>
+
+  <!-- Main Chat Area -->
+  <main class="chat-main">
+    <div class="chat-header">
+      <h2><%= @conversation.short_title %></h2>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+      <% if @messages.empty? %>
+        <div class="chat-empty-state">
+          <p>Send a message to start the conversation.</p>
+        </div>
+      <% else %>
+        <% @messages.each do |message| %>
+          <%= render partial: "conversations/message", locals: { message: message } %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="chat-input-area">
+      <%= form_with model: Message.new, url: conversation_messages_path(@conversation), method: :post, class: "chat-form", id: "chat-form" do |f| %>
+        <div class="chat-input-group">
+          <%= f.text_area :content,
+              placeholder: "Type your message...",
+              class: "chat-input",
+              required: true,
+              rows: 1,
+              autofocus: true,
+              id: "chat-input" %>
+          <%= f.submit "Send", class: "chat-send-btn", id: "chat-send-btn" %>
+        </div>
+      <% end %>
+    </div>
+  </main>
+</div>
+
+<script>
+  (function () {
+    function scrollToBottom() {
+      const el = document.getElementById("chat-messages");
+      if (el) el.scrollTop = el.scrollHeight;
+    }
+
+    function initChat() {
+      scrollToBottom();
+
+      const input = document.getElementById("chat-input");
+      const btn   = document.getElementById("chat-send-btn");
+      const form  = document.getElementById("chat-form");
+      if (!form || !input || !btn) return;
+
+      // Auto-resize textarea
+      input.addEventListener("input", function () {
+        this.style.height = "auto";
+        this.style.height = Math.min(this.scrollHeight, 150) + "px";
+      });
+
+      // Submit on Enter, newline on Shift+Enter
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          if (!btn.disabled && input.value.trim()) form.requestSubmit();
+        }
+      });
+    }
+
+    // Lock UI when Turbo starts submitting this form
+    document.addEventListener("turbo:submit-start", function (e) {
+      const btn = document.getElementById("chat-send-btn");
+      if (btn) { btn.disabled = true; btn.value = "Sending…"; }
+    });
+
+    // Restore button if the submission ends without navigation (e.g. validation error)
+    document.addEventListener("turbo:submit-end", function (e) {
+      const btn = document.getElementById("chat-send-btn");
+      if (btn) { btn.disabled = false; btn.value = "Send"; }
+    });
+
+    // After every Turbo navigation (including the redirect back here)
+    document.addEventListener("turbo:load", initChat);
+  })();
+</script>
+
