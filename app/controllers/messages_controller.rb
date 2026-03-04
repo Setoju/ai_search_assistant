@@ -27,7 +27,18 @@ class MessagesController < ApplicationController
       @conversation.update(title: user_content.truncate(60))
     end
 
-    orchestrator = Orchestrator.new
+    # Extract and store long-term memories in the background so the request
+    # is not blocked by multiple LLM calls (extraction + conflict resolution).
+    last_message = @conversation.messages.where(role: "user").order(created_at: :desc).first
+    MemoryExtractionJob.perform_later(
+      user_id: current_user.id,
+      message_content: user_content,
+      message_id: last_message&.id,
+      message_at: last_message&.created_at || Time.current,
+      recent_history_ids: history.map(&:id)
+    )
+
+    orchestrator = Orchestrator.new(user: current_user)
     result = orchestrator.process_with_memory(user_content, history)
 
     if result[:success]
