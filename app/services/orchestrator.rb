@@ -31,8 +31,9 @@ class Orchestrator
     - Never output raw JSON.
   PROMPT
 
-  def initialize
+  def initialize(user: nil)
     @tool_executor = SafeToolExecutor.new
+    @user = user
   end
 
   def process(user_query)
@@ -57,7 +58,18 @@ class Orchestrator
     sanitized_query = InputSanitizer.sanitize(user_query)
     location = InputSanitizer.extract_location(sanitized_query)
 
-    messages = [ { role: "system", content: SYSTEM_PROMPT } ]
+    # Build system prompt with long-term memory context
+    system_content = SYSTEM_PROMPT
+    if @user
+      memory_context = Memory::Manager.context_for(user: @user, query: sanitized_query)
+      if memory_context
+        system_content = "#{SYSTEM_PROMPT}\n\nLONG-TERM MEMORY:\n#{memory_context}\n\n" \
+          "Use these memories to personalize responses when relevant. " \
+          "You can also use the recall_memories tool to search for more specific user memories."
+      end
+    end
+
+    messages = [ { role: "system", content: system_content } ]
 
     # Add prior conversation history for context (short-term memory, last 10)
     history.each do |msg|
@@ -102,10 +114,16 @@ class Orchestrator
       response = call_llm(messages, tools: Tools.schema)
       message = response["message"]
 
-      if message["tool_calls"]&.any?
+      # Detect tool calls — either via structured API or raw JSON in content
+      tool_calls = message["tool_calls"]
+      if tool_calls.nil? || tool_calls.empty?
+        tool_calls = extract_inline_tool_calls(message["content"])
+      end
+
+      if tool_calls&.any?
         messages << message
 
-        message["tool_calls"].each do |tool_call|
+        tool_calls.each do |tool_call|
           tool_name = tool_call.dig("function", "name").to_s
           next if tool_name.empty?
 
@@ -114,6 +132,11 @@ class Orchestrator
 
           if location && %w[web_search news_search].include?(tool_name) && !args[:location]
             args[:location] = location
+          end
+
+          # Inject user context for recall_memories tool
+          if tool_name == "recall_memories" && @user
+            args[:user_id] = @user.id
           end
 
           result = @tool_executor.execute(tool_name, args)
@@ -177,6 +200,40 @@ class Orchestrator
     end
   rescue JSON::ParserError
     {}
+  end
+
+  # Detect when the LLM outputs a tool call as plain text/JSON instead of
+  # using the structured tool_calls mechanism.
+  def extract_inline_tool_calls(content)
+    return nil if content.blank?
+
+    # Match JSON-like tool call patterns in the response text
+    # e.g. {"name": "recall_memories", "parameters": {"query": "..."}}
+    json_pattern = /\{\s*"name"\s*:\s*"?(\w+)"?\s*,\s*"parameters"\s*:\s*(\{[^}]*\})\s*\}/
+    matches = content.scan(json_pattern)
+    return nil if matches.empty?
+
+    available_tools = Tools.available_tool_names
+
+    matches.filter_map do |name, params_json|
+      next unless available_tools.include?(name)
+
+      parsed_params = begin
+        JSON.parse(params_json)
+      rescue JSON::ParserError
+        {}
+      end
+
+      {
+        "function" => {
+          "name" => name,
+          "arguments" => parsed_params
+        }
+      }
+    end.presence
+  rescue StandardError => e
+    Rails.logger.warn("[Orchestrator] Inline tool call extraction failed: #{e.message}")
+    nil
   end
 
   def build_success_response(content, iterations)
