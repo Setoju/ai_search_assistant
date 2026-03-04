@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_03_082144) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_03_091514) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -31,6 +31,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_03_082144) do
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
   end
 
+  create_table "user_memories", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.text "fact", null: false
+    t.string "category", null: false
+    t.float "embedding", default: [], array: true
+    t.bigint "source_message_id"
+    t.datetime "source_message_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["category"], name: "index_user_memories_on_category"
+    t.index ["user_id", "category"], name: "index_user_memories_on_user_id_and_category"
+    t.index ["user_id"], name: "index_user_memories_on_user_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
@@ -45,4 +59,5 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_03_082144) do
 
   add_foreign_key "conversations", "users"
   add_foreign_key "messages", "conversations"
+  add_foreign_key "user_memories", "users"
 end
