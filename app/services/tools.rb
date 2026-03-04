@@ -3,7 +3,8 @@ module Tools
     @registry ||= {
       web_search: Tools::WebSearch,
       news_search: Tools::NewsSearch,
-      weather_search: Tools::WeatherSearch
+      weather_search: Tools::WeatherSearch,
+      recall_memories: Tools::RecallMemories
     }.freeze
   end
 
