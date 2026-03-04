@@ -23,7 +23,9 @@ class ConversationsController < ApplicationController
 
   def destroy
     @conversation.destroy
-    redirect_to conversations_path, notice: "Conversation deleted."
+    respond_to do |format|
+      format.turbo_stream
+    end
   end
 
   private

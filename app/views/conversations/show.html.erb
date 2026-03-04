@@ -1,31 +1,5 @@
 <div class="chat-layout">
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <h2>Conversations</h2>
-      <%= button_to "+ New Chat", conversations_path, method: :post, class: "btn-new-chat" %>
-    </div>
-    <div class="sidebar-list">
-      <% if @conversations.any? %>
-        <% @conversations.each do |conv| %>
-          <div class="sidebar-item <%= 'active' if @conversation&.id == conv.id %>">
-            <%= link_to conversation_path(conv), class: "sidebar-item-link" do %>
-              <span class="sidebar-item-title"><%= conv.short_title %></span>
-              <span class="sidebar-item-date"><%= time_ago_in_words(conv.updated_at) %> ago</span>
-            <% end %>
-            <%= button_to conversation_path(conv), method: :delete, class: "sidebar-item-delete", data: { turbo_confirm: "Delete this conversation?" } do %>
-              ✕
-            <% end %>
-          </div>
-        <% end %>
-      <% else %>
-        <div class="sidebar-empty">
-          <p>No conversations yet.</p>
-          <p>Start a new chat!</p>
-        </div>
-      <% end %>
-    </div>
-  </aside>
+  <%= render "shared/sidebar" %>
 
   <!-- Main Chat Area -->
   <main class="chat-main">
