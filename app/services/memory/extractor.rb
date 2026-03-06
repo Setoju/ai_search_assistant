@@ -3,8 +3,7 @@ require "json"
 
 module Memory
   class Extractor
-    OLLAMA_BASE_URL = ENV.fetch("OLLAMA_BASE_URL", "http://localhost:11434")
-    MODEL = ENV.fetch("OLLAMA_MODEL", "llama3.2")
+    MODEL = Memory::LlmClient::MODEL
 
     EXTRACTION_PROMPT = <<~PROMPT.freeze
       You are a fact extraction assistant. Your job is to extract personal facts,
@@ -45,9 +44,6 @@ module Memory
     FACTS_SCHEMA = { facts: [{ fact: :string, category: :string }] }.freeze
     FACTS_VALIDATOR = AiGuardrails::SchemaValidator.new(FACTS_SCHEMA)
 
-    # Extract user facts from a message. Returns an array of hashes with :fact and :category.
-    # Accepts optional recent_history (array of Message-like objects) so pronouns
-    # and references ("it", "that", etc.) can be resolved against conversation context.
     def self.extract(user_message, recent_history: [])
       return [] if user_message.blank?
 
@@ -58,7 +54,7 @@ module Memory
         { role: "user", content: "#{context_block}Now, considering the conversation context above, extract personal facts, preferences or hobbies revealed by the user in this latest message:\n\n\"#{user_message}\"" }
       ]
 
-      response = call_llm(messages)
+      response = Memory::LlmClient.call(messages)
       parse_facts(response)
     rescue StandardError => e
       Rails.logger.error("[Memory::Extractor] #{e.class} - #{e.message}")
@@ -66,33 +62,6 @@ module Memory
     end
 
     private
-
-    def self.call_llm(messages)
-      uri = URI("#{OLLAMA_BASE_URL}/api/chat")
-
-      body = {
-        model: MODEL,
-        messages: messages,
-        stream: false,
-        format: "json",
-        options: { temperature: 0.1 }
-      }
-
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.open_timeout = 10
-      http.read_timeout = 60
-
-      request = Net::HTTP::Post.new(uri)
-      request["Content-Type"] = "application/json"
-      request.body = body.to_json
-
-      response = http.request(request)
-
-      raise "Ollama error: #{response.code}" unless response.code.to_i == 200
-
-      parsed = JSON.parse(response.body)
-      parsed.dig("message", "content") || ""
-    end
 
     def self.parse_facts(response_text)
       return [] if response_text.blank?
@@ -122,9 +91,6 @@ module Memory
       []
     end
 
-    # Build a context summary from recent conversation history so the extractor
-    # can understand topics being discussed, resolve pronouns, and identify
-    # preferences/hobbies that emerge across multiple messages.
     def self.build_context(history)
       return "" if history.blank?
 

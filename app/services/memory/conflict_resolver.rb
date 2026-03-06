@@ -3,8 +3,7 @@ require "json"
 
 module Memory
   class ConflictResolver
-    OLLAMA_BASE_URL = ENV.fetch("OLLAMA_BASE_URL", "http://localhost:11434")
-    MODEL = ENV.fetch("OLLAMA_MODEL", "llama3.2")
+    MODEL = Memory::LlmClient::MODEL  # informational; actual call handled by LlmClient
     SIMILARITY_THRESHOLD = 0.5
 
     # Categories that can conflict with each other (opposite sentiments about same topic)
@@ -100,7 +99,7 @@ module Memory
                                                          existing_timestamp, new_timestamp) }
       ]
 
-      response = call_llm(messages)
+      response = Memory::LlmClient.call(messages)
       parse_resolution(response)
     rescue StandardError => e
       Rails.logger.error("[Memory::ConflictResolver] Conflict check failed: #{e.message}")
@@ -114,32 +113,6 @@ module Memory
 
         Do these facts conflict? If so, which should be kept?
       MSG
-    end
-
-    def self.call_llm(messages)
-      uri = URI("#{OLLAMA_BASE_URL}/api/chat")
-
-      body = {
-        model: MODEL,
-        messages: messages,
-        stream: false,
-        format: "json",
-        options: { temperature: 0.1 }
-      }
-
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.open_timeout = 10
-      http.read_timeout = 60
-
-      request = Net::HTTP::Post.new(uri)
-      request["Content-Type"] = "application/json"
-      request.body = body.to_json
-
-      response = http.request(request)
-      raise "Ollama error: #{response.code}" unless response.code.to_i == 200
-
-      parsed = JSON.parse(response.body)
-      parsed.dig("message", "content") || ""
     end
 
     def self.parse_resolution(response_text)
