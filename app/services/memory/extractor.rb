@@ -42,6 +42,9 @@ module Memory
       }
     PROMPT
 
+    FACTS_SCHEMA = { facts: [{ fact: :string, category: :string }] }.freeze
+    FACTS_VALIDATOR = AiGuardrails::SchemaValidator.new(FACTS_SCHEMA)
+
     # Extract user facts from a message. Returns an array of hashes with :fact and :category.
     # Accepts optional recent_history (array of Message-like objects) so pronouns
     # and references ("it", "that", etc.) can be resolved against conversation context.
@@ -94,24 +97,28 @@ module Memory
     def self.parse_facts(response_text)
       return [] if response_text.blank?
 
-      parsed = JSON.parse(response_text)
-      facts = parsed["facts"]
+      repaired = AiGuardrails::JsonRepair.repair(response_text)
+      symbolized = repaired.is_a?(Hash) ? repaired.deep_symbolize_keys : {}
 
-      return [] unless facts.is_a?(Array)
+      success, result = FACTS_VALIDATOR.validate(symbolized)
+      unless success
+        Rails.logger.warn("[Memory::Extractor] Schema validation failed: #{result}")
+        return []
+      end
 
       valid_categories = UserMemory::CATEGORIES
 
-      facts.filter_map do |entry|
-        fact = entry["fact"].to_s.strip
-        category = entry["category"].to_s.strip.downcase
+      Array(result[:facts]).filter_map do |entry|
+        fact = entry[:fact].to_s.strip
+        category = entry[:category].to_s.strip.downcase
 
         next if fact.empty?
         next unless valid_categories.include?(category)
 
         { fact: fact, category: category }
       end
-    rescue JSON::ParserError => e
-      Rails.logger.error("[Memory::Extractor] JSON parse error: #{e.message}")
+    rescue AiGuardrails::JsonRepair::RepairError => e
+      Rails.logger.error("[Memory::Extractor] JSON repair failed: #{e.message}")
       []
     end
 

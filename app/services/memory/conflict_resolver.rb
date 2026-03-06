@@ -33,6 +33,9 @@ module Memory
       {"conflicts": true/false, "keep": "new" or "existing", "reason": "brief explanation"}
     PROMPT
 
+    RESOLUTION_SCHEMA = { conflicts: :boolean, keep: :string, reason: :string }.freeze
+    RESOLUTION_VALIDATOR = AiGuardrails::SchemaValidator.new(RESOLUTION_SCHEMA)
+
     # Check a new fact against existing memories and resolve conflicts.
     # Returns :store if the new fact should be stored,
     #         :skip if it's a duplicate,
@@ -142,13 +145,21 @@ module Memory
     def self.parse_resolution(response_text)
       return { conflicts: false } if response_text.blank?
 
-      parsed = JSON.parse(response_text)
+      repaired = AiGuardrails::JsonRepair.repair(response_text)
+      symbolized = repaired.is_a?(Hash) ? repaired.symbolize_keys : {}
+
+      success, result = RESOLUTION_VALIDATOR.validate(symbolized)
+      unless success
+        Rails.logger.warn("[Memory::ConflictResolver] Schema validation failed: #{result}")
+        return { conflicts: false }
+      end
+
       {
-        conflicts: parsed["conflicts"] == true,
-        keep: parsed["keep"].to_s.downcase,
-        reason: parsed["reason"].to_s
+        conflicts: result[:conflicts] == true,
+        keep: result[:keep].to_s.downcase,
+        reason: result[:reason].to_s
       }
-    rescue JSON::ParserError
+    rescue AiGuardrails::JsonRepair::RepairError
       { conflicts: false }
     end
   end
