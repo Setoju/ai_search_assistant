@@ -2,10 +2,10 @@
 
 one:
   conversation: one
-  role: MyString
-  content: MyText
+  role: user
+  content: What is the weather like today?
 
 two:
   conversation: two
-  role: MyString
-  content: MyText
+  role: assistant
+  content: I can help you check the weather!

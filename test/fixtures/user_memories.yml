@@ -1,0 +1,20 @@
+preference_one:
+  user: one
+  fact: Likes basketball
+  category: preference
+  embedding: "{0.1,0.2,0.3,0.4,0.5}"
+  source_message_at: <%= 1.day.ago %>
+
+dislike_one:
+  user: one
+  fact: Dislikes cold weather
+  category: dislike
+  embedding: "{0.9,0.8,0.7,0.6,0.5}"
+  source_message_at: <%= 2.days.ago %>
+
+personal_fact_one:
+  user: two
+  fact: Works as a software engineer
+  category: personal_fact
+  embedding: "{0.5,0.5,0.5,0.5,0.5}"
+  source_message_at: <%= 3.days.ago %>
