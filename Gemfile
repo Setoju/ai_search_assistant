@@ -69,7 +69,7 @@ group :test do
   gem "selenium-webdriver"
   # Pin minitest to 5.x; minitest 6 changed the `run` method signature and is
   # incompatible with Rails 8's line_filtering.rb (expects the 5.x API).
-  gem "minitest", "~> 5.0"
+  gem "minitest", "~> 6.0"
 end
 
 gem "ai_guardrails", "~> 1.2"
