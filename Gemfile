@@ -71,3 +71,5 @@ group :test do
   # incompatible with Rails 8's line_filtering.rb (expects the 5.x API).
   gem "minitest", "~> 5.0"
 end
+
+gem "ai_guardrails", "~> 1.2"
