@@ -13,7 +13,7 @@ class SafeToolExecutorTest < ActiveSupport::TestCase
       end
     end
 
-    Tools.stub(:fetch, fake_tool) do
+    Tools.stub(:fetch, ->(_) { fake_tool }) do
       result = @executor.execute("web_search", { query: "meaning of life" })
       assert_equal "42", result[:answer]
     end
@@ -22,7 +22,7 @@ class SafeToolExecutorTest < ActiveSupport::TestCase
   test "execute increments call_count" do
     fake_tool = Class.new { def self.call(_); {}; end }
 
-    Tools.stub(:fetch, fake_tool) do
+    Tools.stub(:fetch, ->(_) { fake_tool }) do
       assert_equal 0, @executor.call_count
       @executor.execute("web_search", {})
       assert_equal 1, @executor.call_count
@@ -41,7 +41,7 @@ class SafeToolExecutorTest < ActiveSupport::TestCase
   test "returns error hash when tool raises ArgumentError" do
     bad_tool = Class.new { def self.call(_); raise ArgumentError, "Query is required."; end }
 
-    Tools.stub(:fetch, bad_tool) do
+    Tools.stub(:fetch, ->(_) { bad_tool }) do
       result = @executor.execute("web_search", {})
       assert result.key?(:error)
       assert_match "Invalid input", result[:error]
@@ -55,7 +55,7 @@ class SafeToolExecutorTest < ActiveSupport::TestCase
       end
     end
 
-    Tools.stub(:fetch, slow_tool) do
+    Tools.stub(:fetch, ->(_) { slow_tool }) do
       Timeout.stub(:timeout, ->(_) { raise Timeout::Error }) do
         result = @executor.execute("web_search", {})
         assert result.key?(:error)
@@ -69,11 +69,11 @@ class SafeToolExecutorTest < ActiveSupport::TestCase
 
     # exhaust the limit
     (SafeToolExecutor::MAX_TOOL_CALLS_PER_REQUEST).times do
-      Tools.stub(:fetch, fake_tool) { @executor.execute("web_search", {}) }
+      Tools.stub(:fetch, ->(_) { fake_tool }) { @executor.execute("web_search", {}) }
     end
 
     # The very next call should return the error
-    result = Tools.stub(:fetch, fake_tool) { @executor.execute("web_search", {}) }
+    result = Tools.stub(:fetch, ->(_) { fake_tool }) { @executor.execute("web_search", {}) }
     assert result.key?(:error)
     assert_match "Maximum tool calls", result[:error]
   end
@@ -81,7 +81,7 @@ class SafeToolExecutorTest < ActiveSupport::TestCase
   test "returns generic error hash for unexpected exceptions" do
     broken_tool = Class.new { def self.call(_); raise RuntimeError, "boom"; end }
 
-    Tools.stub(:fetch, broken_tool) do
+    Tools.stub(:fetch, ->(_) { broken_tool }) do
       result = @executor.execute("web_search", {})
       assert result.key?(:error)
       assert_match "encountered an error", result[:error]

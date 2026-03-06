@@ -1,6 +1,7 @@
 ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
+require "minitest/mock"
 
 # Require all support helpers
 Dir[File.expand_path("support/**/*.rb", __dir__)].each { |f| require f }

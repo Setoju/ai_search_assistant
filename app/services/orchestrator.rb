@@ -221,7 +221,7 @@ class Orchestrator
       parsed_params = begin
         JSON.parse(params_json)
       rescue JSON::ParserError
-        {}
+        next
       end
 
       {

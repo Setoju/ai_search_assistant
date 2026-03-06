@@ -1,4 +1,5 @@
 require "test_helper"
+require "ostruct"
 
 class Memory::ExtractorTest < ActiveSupport::TestCase
 
@@ -75,7 +76,7 @@ class Memory::ExtractorTest < ActiveSupport::TestCase
   test "build_context uses only the last 10 messages" do
     messages = (1..15).map { |i| OpenStruct.new(role: "user", content: "msg #{i}") }
     result = Memory::Extractor.send(:build_context, messages)
-    refute_includes result, "msg 1"
+    refute_includes result, "msg 5"   # msgs 1-5 are dropped; "msg 5" can't be a substring of any kept message
     assert_includes result, "msg 6"   # 15 - 10 + 1 = 6th is the earliest kept
     assert_includes result, "msg 15"
   end
