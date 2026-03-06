@@ -29,6 +29,8 @@ class InputSanitizer
     /output\s+(your\s+)?(initial|system)\s+(prompt|instructions)/i
   ].freeze
 
+  SAFETY_FILTER = AiGuardrails::SafetyFilter.new(blocklist: INJECTION_PATTERNS).freeze
+
   # Characters that could be used for encoding attacks
   SUSPICIOUS_CHARS = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/ # Control characters except \t, \n, \r
 
@@ -58,14 +60,12 @@ class InputSanitizer
       raise InvalidInputError.new("Query is too long (maximum #{MAX_QUERY_LENGTH} characters).", :too_long)
     end
 
-    INJECTION_PATTERNS.each do |pattern|
-      if cleaned.match?(pattern)
-        Rails.logger.warn("[InputSanitizer] Prompt injection attempt detected: #{cleaned.slice(0, 100)}")
-        raise InvalidInputError.new(
-          "Your query contains patterns that look like an attempt to manipulate the assistant. Please rephrase your question.",
-          :injection_detected
-        )
-      end
+    unless SAFETY_FILTER.safe?(cleaned)
+      Rails.logger.warn("[InputSanitizer] Prompt injection attempt detected: #{cleaned.slice(0, 100)}")
+      raise InvalidInputError.new(
+        "Your query contains patterns that look like an attempt to manipulate the assistant. Please rephrase your question.",
+        :injection_detected
+      )
     end
 
     # Check for excessive special character density (possible encoding attack)

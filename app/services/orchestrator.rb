@@ -5,6 +5,7 @@ class Orchestrator
   MAX_ITERATIONS = 5
   MODEL = ENV.fetch("OLLAMA_MODEL", "llama3.2")
   OLLAMA_BASE_URL = ENV.fetch("OLLAMA_BASE_URL", "http://localhost:11434")
+  OUTPUT_SAFETY_FILTER = AiGuardrails::SafetyFilter.new(blocklist: InputSanitizer::INJECTION_PATTERNS).freeze
 
   SYSTEM_PROMPT = <<~PROMPT.freeze
     You are a search assistant. Help users find information using the provided tools.
@@ -188,17 +189,25 @@ class Orchestrator
       .gsub(/system\s*:/i, "[filtered]:")
       .gsub(/\[INST\]/i, "")
       .gsub(/\[SYSTEM\]/i, "")
+      .slice(0, 8000)
 
-    cleaned.slice(0, 8000)
+    unless OUTPUT_SAFETY_FILTER.safe?(cleaned)
+      Rails.logger.warn("[Orchestrator] Tool output failed safety check after cleaning; stripping content.")
+      return "[Tool output was filtered for safety.]"
+    end
+
+    cleaned
   end
 
   def parse_args(raw_args)
     case raw_args
     when Hash then raw_args.symbolize_keys
-    when String then JSON.parse(raw_args, symbolize_names: true)
+    when String
+      repaired = AiGuardrails::JsonRepair.repair(raw_args)
+      repaired.is_a?(Hash) ? repaired.symbolize_keys : {}
     else {}
     end
-  rescue JSON::ParserError
+  rescue AiGuardrails::JsonRepair::RepairError
     {}
   end
 
@@ -219,8 +228,9 @@ class Orchestrator
       next unless available_tools.include?(name)
 
       parsed_params = begin
-        JSON.parse(params_json)
-      rescue JSON::ParserError
+        repaired = AiGuardrails::JsonRepair.repair(params_json)
+        repaired.is_a?(Hash) ? repaired : next
+      rescue AiGuardrails::JsonRepair::RepairError
         next
       end
 
